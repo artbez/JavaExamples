@@ -1,0 +1,4 @@
+It is a client side of chat.
+Server - "localhost:8080"
+Need apache maven
+use org.apache.httpcomponents
