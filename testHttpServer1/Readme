@@ -1,0 +1,7 @@
+It is a server side of chat.
+localhost:8080
+database - "test"
+table - "userEx1"
+Need apache maven, mysql
+use org.apache.httpcomponents
+use mysql-connector-java
