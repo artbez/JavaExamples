@@ -2,7 +2,10 @@ package com.mycompany.app;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.sql.*;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
@@ -17,6 +20,7 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.MethodNotSupportedException;
+import org.apache.http.ParseException;
 import org.apache.http.config.SocketConfig;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -29,16 +33,19 @@ import org.apache.http.util.EntityUtils;
 
 public class App 
 {
-	
-	public static String[] database;
-	public static int currentIndex;
+	public static Statement stmt;
+	public static final String tableName = "userEx1"; 
 	
     public static void main( String[] args ) throws Exception
     {
-        int port = 8080;
+    	 Class.forName("com.mysql.jdbc.Driver").newInstance();
+         final Connection conn =
+                 DriverManager.getConnection("jdbc:mysql://localhost/test");
+
+        stmt = conn.createStatement();
+    	
+    	int port = 8080;
         SSLContext sslContext = null;
-        database = new String[100];
-        currentIndex = 0;
         
         SocketConfig socketConfig = SocketConfig.custom()
                 .setSoTimeout(15000)
@@ -60,6 +67,14 @@ public class App
         Runtime.getRuntime().addShutdownHook(new Thread() {
         	public void run() {
         		server.shutdown(5, TimeUnit.SECONDS);
+        		try {
+					stmt.close();
+					conn.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+        		
         	}
         });
     }
@@ -94,14 +109,9 @@ public class App
 				throw new MethodNotSupportedException(method + " method not supported");
 			}
 			
-			String target = request.getRequestLine().getUri();
-			
-			if (request instanceof HttpEntityEnclosingRequest) {
+			if (method.equals("POST") && request instanceof HttpEntityEnclosingRequest) {
 				HttpEntity httpEntity = ((HttpEntityEnclosingRequest) request).getEntity();
-				String myEntityString = EntityUtils.toString(httpEntity);
-				System.out.println("Entity is " + myEntityString);
-				App.database[App.currentIndex] = myEntityString;
-				App.currentIndex++;
+				insertToTable(httpEntity);
 			}
 			
 			String message = getMessage(method);
@@ -113,20 +123,51 @@ public class App
 			System.out.println(conn + ": send message " + message);
 		}
 		
+		void insertToTable(HttpEntity httpEntity) throws ParseException, IOException {
+			String myEntityString = EntityUtils.toString(httpEntity);
+			String[] pairs = myEntityString.split("\r\n");
+			Map<String, String> map = new HashMap<String, String>();
+			map.put(pairs[0].split(":\r")[0], pairs[0].split(":\r")[1]);
+			map.put(pairs[1].split(":\r")[0], pairs[1].split(":\r")[1]);
+			String sql = "INSERT INTO " + tableName + " (name, message) VALUES (\'" 
+							+ map.get("login") + "\',\'" + map.get("message") + "\')";
+			try {
+				stmt.executeUpdate(sql);
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		String getMessage(String method) {
 			
 			String message = null;
 			if (method.equals("GET")) {
 				message = "";
-				for (int i = 0; i < App.currentIndex; ++i) {
-					message += App.database[i] + "\n";
+				String sql = "SELECT * FROM " + tableName;
+				try {
+					ResultSet rs = stmt.executeQuery(sql);
+					while(rs.next()){
+		                String name = rs.getString("name");
+		                String message2 = rs.getString("message");
+		                message += name + ": " + message2 + "\n";
+		            }
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 			}
 			if (method.equals("POST")) {
 				message = "Added";
 			}
 			if (method.equals("DELETE")) {
-				App.currentIndex = 0;
+				String sql = "TRUNCATE TABLE " + tableName;
+				try {
+					stmt.executeUpdate(sql);
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				message = "Cleaned";
 			}
 			

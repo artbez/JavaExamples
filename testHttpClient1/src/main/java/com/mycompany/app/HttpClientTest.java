@@ -12,7 +12,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
-
+import java.util.HashMap;
+import java.util.Map;
 /**
  * Created by artemiibezguzikov on 08.10.15.
  */
@@ -21,9 +22,11 @@ class HttpClientTest {
 
     private CloseableHttpClient client;
     private String host = "http://localhost:8080/";
+    private String name;
 
-    public HttpClientTest() throws Exception {
+    public HttpClientTest(String name) throws Exception {
         client = HttpClients.createDefault();
+        this.name = name;
      }
 
     protected void finalize ( ) {
@@ -37,17 +40,22 @@ class HttpClientTest {
     public void send(String str) throws Exception {
 
         HttpPost httpPost = new HttpPost(host);
-        StringEntity myEntity = new StringEntity(str,
+        StringBuilder sb = new StringBuilder();
+        Map<String, String> env = new HashMap<String, String>();
+        env.put("login", name);
+        env.put("message", str);
+
+        for (Map.Entry<String, String> envEntry : env.entrySet()) {
+            sb.append(envEntry.getKey())
+                    .append(":\r").append(envEntry.getValue())
+                    .append("\r\n");
+        }
+
+        StringEntity myEntity = new StringEntity(sb.toString(),
                 ContentType.create("text/plain", "UTF-8"));
         httpPost.setEntity(myEntity);
 
         CloseableHttpResponse response = client.execute(httpPost);
-        HttpEntity responseEntity = response.getEntity();
-        if (responseEntity != null) {
-            String responseString = EntityUtils.toString(responseEntity);
-            System.out.println(responseString);
-
-        }
     }
 
     public void getAll() throws Exception {
@@ -63,12 +71,6 @@ class HttpClientTest {
 
     public void deleteAll() throws Exception {
         HttpDelete httpDelete = new HttpDelete(host);
-
         CloseableHttpResponse response = client.execute(httpDelete);
-        HttpEntity responseEntity = response.getEntity();
-        if (responseEntity != null) {
-            String responseString = EntityUtils.toString(responseEntity);
-            System.out.println(responseString);
-        }
     }
 }

@@ -1,19 +1,63 @@
 package com.mycompany.app;
 
+import java.util.Scanner;
+
 public class App
 {
 
     public static void main( String[] args ) throws Exception
     {
-        HttpClientTest httpTestClient = new HttpClientTest();
-        httpTestClient.send("1 mes");
-        httpTestClient.send("2 mes");
-        httpTestClient.getAll();
-        httpTestClient.deleteAll();
-        Thread.sleep(10000);
-        httpTestClient.send("1 tre");
-        httpTestClient.send("2 tre");
-        httpTestClient.getAll();
+        System.out.println("Please, print your login");
+        Scanner sc = new Scanner(System.in);
+        String login = sc.nextLine();
+        HttpClientTest httpTestClient = new HttpClientTest(login);
+        while(true)
+        {
+            clearConsole();
+            printMenu();
+            String choice = sc.nextLine().toString();
+            if (choice.equals("1")) {
+                System.out.println("Type message");
+                if (sc.hasNextLine()) {
+                    String text = sc.nextLine();
+                    httpTestClient.send(text);
+                }
+            }
+            else if (choice.equals("2")) {
+                httpTestClient.getAll();
+            }
+            else if (choice.equals("3")) {
+                break;
+            }
+        }
+    }
+
+    public final static void clearConsole()
+    {
+        try
+        {
+            final String os = System.getProperty("os.name");
+
+            if (os.contains("Windows"))
+            {
+                Runtime.getRuntime().exec("cls");
+            }
+            else
+            {
+                Runtime.getRuntime().exec("clear");
+            }
+        }
+        catch (final Exception e)
+        {
+            //  Handle any exceptions.
+        }
+    }
+
+    public final static void printMenu()
+    {
+        System.out.println("1. send message");
+        System.out.println("2. get chat");
+        System.out.println("3. quit");
     }
 }
 
